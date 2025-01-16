@@ -3,11 +3,14 @@ package main
 import (
 	"log"
 	"net/http"
+
 )
 
 func main() {
 	mux := http.NewServeMux()
 
+	databaseHandler()
+	
 	mux.HandleFunc("GET /{s}", home)
 	mux.HandleFunc("GET /snippet/view", snippetView)
 	mux.HandleFunc("GET /snippet/view/{id}", snippetView)

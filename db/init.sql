@@ -1,0 +1,8 @@
+DROP TABLE IF EXISTS user;
+CREATE TABLE user (
+  id         INT AUTO_INCREMENT NOT NULL,
+  blaze      VARCHAR(128) NOT NULL,
+  password     VARCHAR(255) NOT NULL,
+  role      VARCHAR(255) NOT NULL,
+  PRIMARY KEY (`id`)
+);

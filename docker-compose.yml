@@ -1,0 +1,14 @@
+services:
+  database:
+    image: postgres:13-alpine
+    ports:
+      - target: 5432
+    environment:
+      - POSTGRES_DB=konfort
+      - POSTGRES_USER=konfort
+      - POSTGRES_PASSWORD=konfort
+    volumes:
+      - ./db/init.sql:/docker-entrypoint-initdb.d/init.sql
+      - db_data:/var/lib/postgresql/data:rw
+volumes:
+  db_data:
