@@ -5,27 +5,7 @@ import (
 	"fmt"
 	"log"
 	"os"
-
-	"github.com/jackc/pgx/v5/pgxpool"
-	"github.com/joho/godotenv"
 )
-
-type role string
-
-const (
-	NEW_USER       	role = "NEW_USER"
-    USER 			role = "USER"
-    ADMIN     		role = "ADMIN"
-	SUPER_ADMIN		role = "SUPER_ADMIN"
-)
-
-type User struct {
-    ID     int64
-    Mail  string
-    Blaze string
-    Password_hash  string
-	Role  role
-}
 
 var dbpool *pgxpool.Pool
 
