@@ -24,19 +24,34 @@ func (app *application) healthCheck(w http.ResponseWriter, r *http.Request) {
 
 func (app *application) userCreate(w http.ResponseWriter, r *http.Request) {
 
-	var user models.User
-	err := json.NewDecoder(r.Body).Decode(&user)
-	if err != nil {
-		app.clientError(w, http.StatusBadRequest)
-	}
+	decoder := json.NewDecoder(r.Body) 
+
+    var user models.UserPost
+	
+	err := decoder.Decode(&user) 
+
+    if err != nil {  
+        http.Error(w, err.Error(), http.StatusBadRequest)  
+        return 
+	} 
+
+	
+    fmt.Println(user) 
 
 	id, err := app.users.Insert(user.Email, user.Blaze, user.Password_hash, models.NEW_USER)
-	if err != nil {
-		app.clientError(w, http.StatusBadRequest)
-	}
+	
+	fmt.Printf("%d id\n", id)
 
-	w.WriteHeader(http.StatusAccepted)
-	fmt.Fprintf(w, "User %d created", id)
+	if err != nil {
+
+		
+
+		http.Error(w, err.Error(), http.StatusBadRequest)  
+        return 
+	}
+	
+	w.WriteHeader(http.StatusOK)
+	
 }
 
 func (app *application) userLogin(w http.ResponseWriter, r *http.Request) {
@@ -44,6 +59,7 @@ func (app *application) userLogin(w http.ResponseWriter, r *http.Request) {
 	var creds models.Credentials
 
 	err := json.NewDecoder(r.Body).Decode(&creds)
+	
 	if err != nil {
 		app.clientError(w, http.StatusBadRequest)
 	}

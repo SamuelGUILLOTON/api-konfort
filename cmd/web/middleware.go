@@ -3,20 +3,13 @@ package main
 import (
 	"fmt"
 	"net/http"
+	"io"
+	"bytes"
+	"encoding/json"
 )
 
 func commonHeaders(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-
-		// Note: This is split across multiple lines for readability. You don't
-		// need to do this in your own code.
-		w.Header().Set("Content-Security-Policy",
-		"default-src 'self'; style-src 'self' fonts.googleapis.com; font-src fonts.gstatic.com")
-		w.Header().Set("Referrer-Policy", "origin-when-cross-origin")
-		w.Header().Set("X-Content-Type-Options", "nosniff")
-		w.Header().Set("X-Frame-Options", "deny")
-		w.Header().Set("X-XSS-Protection", "0")
-		w.Header().Set("Server", "Go")
 
 		next.ServeHTTP(w, r)
 	})
@@ -26,7 +19,6 @@ func (app *application) recoverPanic(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request)  {
 
 		defer func()  {
-
 			if err := recover(); err != nil {
 				// quand go voit se header dans la rep il ferme ensuite la connexion
 				w.Header().Set("Connection", "close")
@@ -53,5 +45,40 @@ func (app *application) requireAuthentication(next http.Handler) http.Handler {
 	}
 
 	next.ServeHTTP(w, r)
+	})
+}
+
+
+func (app *application) loggingPostRequest(next http.Handler) http.Handler {
+
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		var bodyBytes []byte
+		var err error
+
+		if r.Body != nil {
+			bodyBytes, err = io.ReadAll(r.Body)
+			if err != nil {
+				fmt.Printf("Body reading error: %v", err)
+				return
+			}
+			defer r.Body.Close()
+		}
+
+		fmt.Printf("Headers: %+v\n", r.Header)
+
+		var prettyJSON bytes.Buffer
+		
+		if len(bodyBytes) > 0 {
+			
+			if err = json.Indent(&prettyJSON, bodyBytes, "", "\t"); err != nil {
+				fmt.Printf("JSON parse error: %v", err)
+				return
+			}
+			fmt.Println(string(prettyJSON.String()))
+		} else {
+			fmt.Printf("Body: No Body Supplied\n")
+		}
+
+		next.ServeHTTP(w, r)
 	})
 }

@@ -3,10 +3,13 @@ package querys
 import (
 	"context"
 	"errors"
+	"fmt"
+	"time"
 
 	"api.konfort.com/internal/models"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/jackc/pgx/v5/pgconn"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -18,21 +21,34 @@ type UserModel struct {
 // This will insert a new snippet into the database.
 func (m *UserModel) Insert(mail string, blaze string, password string, role models.Role) (int, error) {
 
+
+	now := time.Now()
+
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), 12) 
 	if err != nil {
 		return 0, err
 	}
 
-	stmt := `INSERT INTO user (mail, blaze, password, role)
-	VALUES(?,?, UTC_TIMESTAMP(), DATE_ADD(UTC_TIMESTAMP(), INTERVAL ? DAY))`
+	stmt := `INSERT INTO users (email, blaze, password_hash, role, created_at) VALUES($1, $2, $3, $4, $5)`
 
-	result, err := m.DB.Exec(context.Background(), stmt, mail, blaze, hashedPassword, models.NEW_USER)
-
+	result, err := m.DB.Exec(context.Background(), stmt, mail, blaze, hashedPassword, role, now)
+	
 	if err != nil {
-		return 0, err
+		var pgErr *pgconn.PgError
+		if ok := errors.As(err, &pgErr); ok {
+			switch pgErr.Code {
+			case "23505": // Unique violation
+				fmt.Println("Erreur : L'email ou le blaze existe déjà.")
+			default:
+				fmt.Println("Erreur SQL :", pgErr.Message)
+			}
+		} else {
+			fmt.Println("Autre erreur :", err)
+		}
 	}
 
 	insertNumber := result.RowsAffected()
+
 	if insertNumber == 0 {
 		return 0, nil
 	}
@@ -44,7 +60,12 @@ func (m *UserModel) Authenticate(creds models.Credentials) (error) {
 	var id int
 	var hashedPassword []byte
 
+
+	fmt.Println("auth")	
+
 	stmt := "SELECT id, password FROM user WHERE email = ?"
+
+	fmt.Printf("%d %d",&id, &hashedPassword)
 
 	err := m.DB.QueryRow(context.Background(), stmt, creds.Email).Scan(&id, &hashedPassword)
 

@@ -23,6 +23,14 @@ type User struct {
 	updated_at	  time.Time `json:"updated_at"`
 }
 
+
+type UserPost struct {
+	Email         string	`json:"email"`
+	Blaze         string	`json:"blaze"`
+	Password_hash string	`json:"password"`
+	Role          Role		`json:"role"`
+}
+
 type Credentials struct {
     Email    string `json:"email"`
     Password string `json:"password"`
