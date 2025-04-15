@@ -9,5 +9,7 @@ var (
 
 	ErrInvalidCredentials = errors.New("models: invalid credential")
 
+	ErrSigninUnfinish = errors.New("inscription non terminé")
+
 	ErrDuplicateEmail = errors.New("models: duplicates email")
 )

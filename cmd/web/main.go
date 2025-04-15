@@ -20,8 +20,8 @@ import (
 type application struct {
 	logger *slog.Logger
 	users  *querys.UserModel
+	email  *querys.MailModel
 }
-
 
 func main() {
 	err := godotenv.Load(".env")
@@ -44,6 +44,7 @@ func main() {
 	app := &application{
 		logger: logger,
 		users: &querys.UserModel{DB: db},
+		email: &querys.MailModel{DB: db},
 	}
 	defer db.Close()
 

@@ -8,31 +8,29 @@ import (
 
 	"api.konfort.com/internal/models"
 	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/jackc/pgx/v5/pgconn"
+	"github.com/jackc/pgx/v5/pgxpool"
 	"golang.org/x/crypto/bcrypt"
 )
-
 
 type UserModel struct {
 	DB *pgxpool.Pool
 }
 
 // This will insert a new snippet into the database.
-func (m *UserModel) Insert(mail string, blaze string, password string, role models.Role) (int, error) {
-
+func (m *UserModel) Insert(mail string, blaze string, password string, role models.Role, token_validation string) (int, error) {
 
 	now := time.Now()
 
-	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), 12) 
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(password), 12)
 	if err != nil {
 		return 0, err
 	}
 
-	stmt := `INSERT INTO users (email, blaze, password_hash, role, created_at) VALUES($1, $2, $3, $4, $5)`
+	stmt := `INSERT INTO users (email, blaze, password_hash, role, created_at, token_validation) VALUES($1, $2, $3, $4, $5, $6)`
 
-	result, err := m.DB.Exec(context.Background(), stmt, mail, blaze, hashedPassword, role, now)
-	
+	result, err := m.DB.Exec(context.Background(), stmt, mail, blaze, hashedPassword, role, now, token_validation)
+
 	if err != nil {
 		var pgErr *pgconn.PgError
 		if ok := errors.As(err, &pgErr); ok {
@@ -56,18 +54,15 @@ func (m *UserModel) Insert(mail string, blaze string, password string, role mode
 	return int(insertNumber), nil
 }
 
-func (m *UserModel) Authenticate(creds models.Credentials) (error) {
-	var id int
+func (m *UserModel) Authenticate(creds models.Credentials) error {
 	var hashedPassword []byte
+	var role string
 
+	fmt.Println("in auth")
 
-	fmt.Println("auth")	
+	stmt := "SELECT password_hash, role FROM users WHERE email = $1"
 
-	stmt := "SELECT id, password FROM user WHERE email = ?"
-
-	fmt.Printf("%d %d",&id, &hashedPassword)
-
-	err := m.DB.QueryRow(context.Background(), stmt, creds.Email).Scan(&id, &hashedPassword)
+	err := m.DB.QueryRow(context.Background(), stmt, creds.Email).Scan(&hashedPassword, &role)
 
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -75,18 +70,22 @@ func (m *UserModel) Authenticate(creds models.Credentials) (error) {
 		} else {
 			return err
 		}
-		
-	} 
-	
+	}
+
+
 	// Check whether the hashed password and plain-text password provided match.
 	// If they don't, we return the ErrInvalidCredentials error.
-	err = bcrypt.CompareHashAndPassword(hashedPassword, []byte(creds.Email))
+	err = bcrypt.CompareHashAndPassword(hashedPassword, []byte(creds.Password))
 	if err != nil {
 		if errors.Is(err, bcrypt.ErrMismatchedHashAndPassword) {
 			return ErrInvalidCredentials
-			} else {
+		} else {
 			return err
 		}
+	}
+
+	if role == "NEW_USER" {
+		return ErrSigninUnfinish
 	}
 
 	// Otherwise, the password is correct. Return the user ID.
@@ -97,9 +96,35 @@ func (m *UserModel) Exist() (bool, error) {
 	return false, nil
 }
 
-
 // This will return a specific snippet based on its id.
 func (m *UserModel) Get(id int) (models.User, error) {
 	return models.User{}, nil
 }
 
+func (m *UserModel) CheckInscription(mail string) (int, error) {
+
+	stmt := `UPDATE users SET role = 'USER' WHERE email = $1`
+
+	result, err := m.DB.Exec(context.Background(), stmt, mail)
+
+	if err != nil {
+		var pgErr *pgconn.PgError
+		if errors.As(err, &pgErr) {
+			switch pgErr.Code {
+			case "23505": // Unique violation
+				return 0, fmt.Errorf("conflit de données : %v", pgErr.Message)
+			default:
+				return 0, fmt.Errorf("erreur SQL : %v", pgErr.Message)
+			}
+		}
+		return 0, fmt.Errorf("erreur inconnue : %w", err)
+	}
+
+	setNumber := result.RowsAffected()
+
+	if setNumber == 0 {
+		return 0, nil
+	}
+
+	return int(setNumber), nil
+}

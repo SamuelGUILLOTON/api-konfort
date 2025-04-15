@@ -38,8 +38,9 @@ func (app *application) requireAuthentication(next http.Handler) http.Handler {
 	// the chain are executed.
 	Bearer := r.Header.Get("Authorization")
 
-	err := verifyToken(Bearer)
-	if err != nil {
+	token, err := verifyToken(Bearer)
+
+	if (err != nil || token == nil)  {
 		http.Redirect(w, r, "/user/login", http.StatusSeeOther)
 		return
 	}
@@ -47,7 +48,6 @@ func (app *application) requireAuthentication(next http.Handler) http.Handler {
 	next.ServeHTTP(w, r)
 	})
 }
-
 
 func (app *application) loggingPostRequest(next http.Handler) http.Handler {
 
