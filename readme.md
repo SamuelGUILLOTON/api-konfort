@@ -1,7 +1,7 @@
 ## KONFORT API
 
 ### what is konfort 
-**Konfort** is an video project management application who had to purpose simplicity in order to manage video feadback
+**Konfort** is an video project management application which looking for simplicity
 
 ### install konfort api 
 Run api : 
@@ -13,3 +13,10 @@ Check et optimiser dependances :
 go mod tidy
 
 
+TO DO : 
+
+**USERS**
+[] INSERT IN BDD
+[] CHECK USER BY MAIL
+[] LOGIN
+[] 

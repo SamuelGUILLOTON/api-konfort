@@ -25,6 +25,7 @@ func (app *application) healthCheck(w http.ResponseWriter, r *http.Request) {
 
 func (app *application) userCreate(w http.ResponseWriter, r *http.Request) {
 	
+	//fetch body request
 	decoder := json.NewDecoder(r.Body)
 	var user models.UserPost
 	
@@ -36,6 +37,7 @@ func (app *application) userCreate(w http.ResponseWriter, r *http.Request) {
 	
 	fmt.Println(user)
 	
+	//create token 
 	tokenString, err := createTokenUrl(user.Email)
 
 	if err != nil {
@@ -43,19 +45,21 @@ func (app *application) userCreate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	
+	//save user in bdd
 	id, err := app.users.Insert(user.Email, user.Blaze, user.Password_hash, models.NEW_USER, tokenString)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 	
-	// If the user ID is 1, send an email
+	// if one user has been added it has been created
 	if id == 1 {
 		fmt.Println("tettetetetetet")
 		var emailTemplate *models.Email
 
 		var template string = "check_sign_up";
 
+		//fetch emailTemplate
 		emailTemplate, err = app.email.GetEmailTemplate(template)
 
 		if err != nil {
@@ -63,6 +67,7 @@ func (app *application) userCreate(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
+		//send mail to user
 		err := services.Mailer("samuel.guilloton01@gmail.com", "samuel.guilloton01@gmail.com", 
 		emailTemplate.Subject, tokenString, emailTemplate.Html_content)
 	
@@ -72,7 +77,7 @@ func (app *application) userCreate(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		
-		// Email sent successfully
+		// user has been created in bdd partialy and email has been send
 		w.WriteHeader(http.StatusCreated)
 		return
 	}
